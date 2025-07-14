@@ -14,26 +14,29 @@ It communicates with an OpenAI-compatible API endpoint (tested with OpenWebUI/Ol
 
 **Configuration**
 
-The following settings can be configured using environment variables, allowing you to share or deploy the script without hardcoded secrets:
+The behavior of `llmcli` can be customized using environment variables, allowing users to safely avoid embedding secrets or configuration directly in the script.
 
--   `LLMCLI_API`: URL of the API endpoint\
-    Default: `http://dogbox.local:4000/api/chat/completions`
+The following variables are supported:
 
--   `LLMCLI_API_TOKEN`: API token for authentication\
-    Default: `sk-7db43b229f614481b413ceba13a1f186`
+-   `LLMCLI_API`: URL of the API endpoint
 
--   `LLMCLI_MODEL`: The LLM model to use\
-    Default: `qwen-general4b`
+-   `LLMCLI_API_TOKEN`: API token used for authentication
 
--   `LLMCLI_COLLECTION_ID`: Optional retrieval collection ID\
-    Default: *(empty)*
+-   `LLMCLI_MODEL`: The name of the LLM model to use
 
-Example usage in your shell:
+-   `LLMCLI_COLLECTION_ID`: Optional collection ID for retrieval-augmented queries
 
+These should be defined in your shell environment before running the script.
 
-`export LLMCLI_API="http://localhost:11434/v1/chat/completions`
-`export LLMCLI_API_TOKEN="your-token"`
-`export LLMCLI_MODEL="mistral"`
+Example:
+```
+export LLMCLI_API="http://localhost:4000/v1/chat/completions"
+export LLMCLI_API_TOKEN="your-token"
+export LLMCLI_MODEL="mistral"
+```
+
+**Recommended:** Use environment variables to manage credentials and endpoint configuration.\
+**Optional:** You may also hardcode default values inside the script if you are the sole user or running in a secure, isolated environment --- but this is not recommended for shared or production use.
 
 * * * * *
 
@@ -41,6 +44,8 @@ Example usage in your shell:
 
 -   `-s` or `--shell-task`\
     Automate a shell task using the LLM to generate and explain commands.
+
+    **Note:** This option must be immediately followed by the shell task description, without any intervening flags or arguments.
 
 -   `-f` or `--file`\
     Include the contents of a file as part of the prompt for context.
