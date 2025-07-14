@@ -32,7 +32,7 @@ Example usage in your shell:
 
 
 `export LLMCLI_API="http://localhost:11434/v1/chat/completions
-`export LLMCLI_API_TOKEN="your-token"
+export LLMCLI_API_TOKEN="your-token"
 `export LLMCLI_MODEL="mistral"`
 
 * * * * *
