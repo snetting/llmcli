@@ -44,6 +44,7 @@ export LLMCLI_MODEL="mistral"
 
 -   `-s` or `--shell-task`\
     Automate a shell task using the LLM to generate and explain commands.
+    Note: This option must be immediately followed by the shell task description, without any intervening flags or arguments.
 
 -   `-f` or `--file`\
     Include the contents of a file as part of the prompt for context.
