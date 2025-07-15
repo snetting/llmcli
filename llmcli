@@ -7,13 +7,14 @@ import re
 import subprocess
 import json
 import shutil
+import time
 
 # === CONFIGURATION VARIABLES ===
 # Safer to define via ENVARS, but can also include defaults here
-API = os.getenv("LLM_API", "")
-API_TOKEN = os.getenv("LLM_API_TOKEN", "")
-LLM_MODEL = os.getenv("LLM_MODEL", "")
-COLLECTION_ID = os.getenv("LLM_COLLECTION_ID", "")  # Leave empty if unused
+API = os.getenv("LLM_API", "http://dogbox.local:4000/api/chat/completions")
+API_TOKEN = os.getenv("LLM_API_TOKEN", "sk-7db43b229f614481b413ceba13a1f186")
+LLM_MODEL = os.getenv("LLM_MODEL", "qwen-openshift")
+COLLECTION_ID = os.getenv("LLM_COLLECTION_ID", "f24c14cc-0021-4798-a459-9efd7231a351")  # Leave empty if unused
 # ===============================
 
 
@@ -22,6 +23,7 @@ SYSTEM_PROMPT = (
     "You can execute shell commands to achieve tasks, and you will receive the output of each command. Never run interactive commands — if you need CPU or memory stats, use non-interactive tools (e.g. top -b -n1, vmstat, reading /proc/stat, or using a Python psutil snippet). "
     "Respond only in JSON when running in shell-task mode."
 )
+
 
 # Global verbosity-controlled flags (set at runtime)
 SHOW_STATUS = False   # -v
@@ -34,23 +36,8 @@ default_status_len = 0
 _last_status_len = 0
 
 def print_status(message: str):
-    """Overwrite a single status line in the terminal."""
-    global _last_status_len
-    width = shutil.get_terminal_size((80, 20)).columns
-    msg = message[:width]
-    if len(msg) < _last_status_len:
-        msg = msg + " " * (_last_status_len - len(msg))
-    sys.stdout.write("\r" + msg)
-    sys.stdout.flush()
-    _last_status_len = len(message)
-
-
-def clear_status():
-    """Clear the status line once done."""
-    global _last_status_len
-    sys.stdout.write("\r" + " " * _last_status_len + "\r")
-    sys.stdout.flush()
-    _last_status_len = 0
+    """Print each status update on its own line."""
+    print(f"[STATUS] {message}")
 
 
 def read_stdin_if_available():
@@ -82,7 +69,6 @@ def call_chat_api(messages):
 
     raw = data["choices"][0]["message"]["content"]
     if SHOW_THINKING:
-        clear_status()
         print(raw.strip())
 
     return raw, data
@@ -103,7 +89,7 @@ def run_shell_agent(task):
         {"role": "user", "content": (
             f"Your task is: {task}\n\n"
             "For each step, output {\"command\": <shell command>, \"explanation\": <why>}.\n"
-            "When complete, output {\"done\": true} and stop."
+            "When complete, output {\"done\": true} and stop. Output only JSON."
         )}
     ]
     decoder = json.JSONDecoder()
@@ -129,7 +115,6 @@ def run_shell_agent(task):
                 idx += 1
 
         if not actions:
-            clear_status()
             print(f"❌ Failed to parse JSON from LLM:\n{clean}")
             return
 
@@ -148,7 +133,6 @@ def run_shell_agent(task):
 
             # interactive confirmation
             if INTERACTIVE:
-                clear_status()
                 print(f"About to run:\n  {cmd}\nReason: {why}")
                 resp = input("Proceed? [y/N] ").strip().lower()
                 if resp not in ("y", "yes"):
@@ -156,7 +140,6 @@ def run_shell_agent(task):
                     sys.exit(1)
 
             if SHOW_COMMANDS:
-                clear_status()
                 print(f">>> COMMAND: {cmd}\n# {why}")
 
             out, err, code = run_shell_command(cmd)
@@ -179,20 +162,48 @@ def run_shell_agent(task):
             break
 
     if not done:
-        clear_status()
         print("❌ Reached max iterations (50). Exiting.")
         return
 
     # final summary
     if SHOW_STATUS:
         print_status("Creating summary…")
-    messages.append({"role": "user", "content":
-        "Based on the command outputs above, provide a concise summary of the operations performed and final result."
+    #messages.append({"role": "user", "content":
+    #    "Based on the command outputs above, provide a concise summary of the operations performed and final result."
+    #})
+    # force JSON-only on the summary turn:
+    messages.append({
+        "role": "system",
+        "content": (
+            "Now output a single JSON object with exactly two fields:\n"
+            "  \"done\": true,\n"
+            "  \"summary\": a concise plain-text summary\n"
+            "Do not output anything else."
+        )
+    })
+    messages.append({
+        "role": "user",
+        "content":
+            "Based on the command outputs above, provide a concise summary of the operations performed and final result."
     })
     final_raw, _ = call_chat_api(messages)
     summary = final_raw.strip() if SHOW_THINKING else strip_thinking_blocks(final_raw)
-    clear_status()
     print(f"\n✅ Final summary: {summary}")
+
+    # Originally reported raw output if JSON fails, but this almost always causes additional output :(
+    #final_raw, _ = call_chat_api(messages)
+    # (2) safely parse JSON, fallback to raw text
+    #try:
+    #    final_obj = json.loads(final_raw)
+    #    summary = final_obj.get("summary", "").strip()
+    #    if not summary:
+    #        raise ValueError("empty summary field")
+    #except Exception as e:
+    #    # model either returned non-JSON or an empty JSON; fallback:
+    #    print("[WARN] failed to parse JSON summary:", e)
+    #    print("[DEBUG] raw LLM reply:", final_raw)
+    #    summary = strip_thinking_blocks(final_raw)
+    #    print(f"\n✅ Final summary: {summary}")
 
 
 def main():
@@ -248,7 +259,6 @@ def main():
     if SHOW_STATUS:
         print_status("Thinking…")
     raw, _ = call_chat_api(messages)
-    clear_status()
 
     output = raw.strip() if SHOW_THINKING else strip_thinking_blocks(raw)
     print(output)
@@ -256,3 +266,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
