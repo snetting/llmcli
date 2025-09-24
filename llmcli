@@ -11,10 +11,10 @@ import time
 
 # === CONFIGURATION VARIABLES ===
 # Safer to define via ENVARS, but can also include defaults here
-API = os.getenv("LLM_API", "http://dogbox.local:4000/api/chat/completions")
-API_TOKEN = os.getenv("LLM_API_TOKEN", "sk-7db43b229f614481b413ceba13a1f186")
-LLM_MODEL = os.getenv("LLM_MODEL", "qwen-openshift")
-COLLECTION_ID = os.getenv("LLM_COLLECTION_ID", "f24c14cc-0021-4798-a459-9efd7231a351")  # Leave empty if unused
+#API = os.getenv("LLM_API", "https://openwebui.url/api/chat/completions")
+#API_TOKEN = os.getenv("LLM_API_TOKEN", "sk-xxx")
+#LLM_MODEL = os.getenv("LLM_MODEL", "qwen-general14b")
+#COLLECTION_ID = os.getenv("LLM_COLLECTION_ID", "")  # Leave empty if unused
 # ===============================
 
 
